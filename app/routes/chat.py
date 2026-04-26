@@ -24,11 +24,15 @@ router = APIRouter(tags=["chat"])
     response_model=ChatResponse,
     status_code=status.HTTP_200_OK,
 )
-def chat(
-    request: ChatRequest,
-) -> ChatResponse:
+def chat(request: ChatRequest) -> ChatResponse:
     """
     Accept a user message, send it to the selected provider, and return the answer.
+    
+    Accepts:
+        message: The user's chat message
+        provider: LLM provider ("auto", "gemini", "groq")
+        api_key: Optional user-provided API key
+        temperature: Response creativity (0.0-1.0)
     """
     try:
         providers_to_try = get_chat_provider_order(request.provider)
@@ -43,7 +47,12 @@ def chat(
 
     for index, provider in enumerate(providers_to_try):
         try:
-            llm = get_llm(provider)
+            # Pass api_key and temperature from the request
+            llm = get_llm(
+                provider=provider,
+                api_key=request.api_key,
+                temperature=request.temperature,
+            )
             llm_response = llm.invoke(request.message)
             return ChatResponse(
                 answer=llm_response.content,

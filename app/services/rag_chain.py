@@ -36,12 +36,31 @@ Answer:
 """
 
 
-def run_rag(question: str, store: FAISS) -> dict:
+def run_rag(
+    question: str,
+    store: FAISS,
+    provider: str = "auto",
+    api_key: str | None = None,
+    temperature: float = 0.7,
+    top_k: int = 4,
+) -> dict:
     """
     Retrieve the most relevant chunks and generate an answer using only them.
+    
+    Parameters:
+        question: User's question about the document
+        store: FAISS vector store with document chunks
+        provider: LLM provider ("auto", "gemini", "groq")
+        api_key: Optional user-provided API key
+        temperature: Response creativity (0.0-1.0)
+        top_k: Number of chunks to retrieve for context
+    
+    Returns:
+        Dict with keys: answer, sources, answerable, provider, fallback_used
     """
     try:
-        retrieved_chunks = search(store, question, k=4)
+        # Retrieve the most relevant chunks based on top_k parameter
+        retrieved_chunks = search(store, question, k=top_k)
 
         context = "\n\n".join(chunk.page_content for chunk in retrieved_chunks)
         prompt = PromptTemplate.from_template(RAG_PROMPT_TEMPLATE).format(
@@ -57,36 +76,44 @@ def run_rag(question: str, store: FAISS) -> dict:
             )
         )
 
-        providers_to_try = get_chat_provider_order(settings.default_chat_provider)
+        providers_to_try = get_chat_provider_order(provider)
         last_exception: Exception | None = None
 
-        for provider in providers_to_try:
+        for provider_attempt in providers_to_try:
             try:
-                llm = get_llm(provider)
+                # Pass api_key and temperature to get_llm
+                llm = get_llm(
+                    provider=provider_attempt,
+                    api_key=api_key,
+                    temperature=temperature,
+                )
                 llm_response = llm.invoke(prompt)
                 answer = str(llm_response.content).strip()
 
                 logger.info(
-                    "Generated RAG answer using provider '%s' with %s retrieved chunk(s).",
-                    provider,
+                    "Generated RAG answer using provider '%s' with %s retrieved chunk(s) and top_k=%s.",
+                    provider_attempt,
                     len(retrieved_chunks),
+                    top_k,
                 )
                 return {
                     "answer": answer,
                     "sources": sources,
                     "answerable": NO_ANSWER_TEXT not in answer,
+                    "provider": provider_attempt,
+                    "fallback_used": provider_attempt != providers_to_try[0],
                 }
             except ResourceExhausted as exc:
                 last_exception = exc
                 logger.warning(
                     "RAG provider '%s' hit a rate limit. Trying next provider if available.",
-                    provider,
+                    provider_attempt,
                 )
             except Exception as exc:
                 last_exception = exc
                 logger.exception(
                     "RAG generation failed for provider '%s'. Trying next provider if available.",
-                    provider,
+                    provider_attempt,
                 )
 
         if last_exception is not None:

@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Knowledge Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Root CSS Variables - Design System */
+        :root {
+            --bg-primary: #0f1117;
+            --bg-sidebar: #1a1d27;
+            --bg-card: #1e2130;
+            --border: #2d3148;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --sidebar-width: 280px;
+            --transition: all 0.2s ease-out;
+        }
+
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        /* Main Layout Container */
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header - Fixed at top */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #141820;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+        }
+
+        .status-dot.connected {
+            background-color: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background-color: var(--error);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Container - Below header */
+        .container {
+            display: flex;
+            flex: 1;
+            margin-top: 60px;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 32px;
+        }
+
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Main Content Area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Card Component */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        /* Form Fields */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="email"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: #0f1117;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            max-height: 160px;
+        }
+
+        .input-helper {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .slider-value {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Buttons */
+        button {
+            padding: 8px 16px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            opacity: 0.9;
+        }
+
+        button.full-width {
+            width: 100%;
+        }
+
+        .save-confirmation {
+            display: none;
+            font-size: 12px;
+            color: var(--success);
+            margin-top: 8px;
+        }
+
+        .save-confirmation.show {
+            display: block;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--accent);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background-color: rgba(99, 102, 241, 0.02);
+        }
+
+        .upload-zone:hover {
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--accent-hover);
+            background-color: rgba(99, 102, 241, 0.1);
+            border-style: solid;
+        }
+
+        .upload-zone-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .upload-zone-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 8px 0 4px 0;
+        }
+
+        .upload-zone-subtext {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        #upload-input {
+            display: none;
+        }
+
+        /* Upload Status */
+        .upload-status {
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 12px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .upload-status.show {
+            display: block;
+        }
+
+        .upload-status.success {
+            background-color: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .upload-status.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .upload-status.pending {
+            background-color: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        /* Document Badge */
+        .document-badge {
+            padding: 8px 12px;
+            background-color: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--success);
+            margin-top: 12px;
+        }
+
+        .document-badge.empty {
+            background-color: transparent;
+            border: none;
+            color: var(--text-muted);
+        }
+
+        /* Chat Section */
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 400px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            padding-right: 4px;
+        }
+
+        .chat-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        textarea#question-input {
+            min-height: 80px;
+        }
+
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* Answer Card */
+        .answer-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .answer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .answer-question {
+            font-weight: 500;
+            color: var(--text-primary);
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .answer-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            margin-left: 12px;
+        }
+
+        .answer-body {
+            padding: 8px 0;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .answer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .answer-status {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: rgba(99, 102, 241, 0.15);
+            color: var(--accent);
+            border-radius: 3px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .badge.success {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .badge.error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        .badge.warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .provider-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .answer-body.warning {
+            color: var(--warning);
+        }
+
+        .answer-body.error {
+            color: var(--error);
+        }
+
+        /* Skeleton Loader */
+        .skeleton {
+            animation: skeleton-load 1s infinite alternate;
+        }
+
+        @keyframes skeleton-load {
+            from { background-color: var(--bg-card); }
+            to { background-color: #2d3148; }
+        }
+
+        .loading-skeleton {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            background-color: var(--border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            animation: skeleton-load 1s infinite;
+        }
+
+        .skeleton-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .is-hidden {
+            display: none;
+        }
+
+        .selected-file {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .selected-file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .selected-file-meta {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                overflow: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 16px;
+            }
+
+            .main {
+                overflow: visible;
+            }
+
+            .content-area {
+                padding: 16px;
+            }
+
+            .header {
+                padding: 0 16px;
+            }
+
+            .header-right {
+                font-size: 12px;
+            }
+
+            textarea {
+                min-height: 60px;
+            }
+
+            .input-footer {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <span>🧠</span>
+            <span>RAG Knowledge Assistant</span>
+        </div>
+        <div class="header-right">
+            <div class="connection-status">
+                <span class="status-dot connected" id="status-dot"></span>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- LLM Configuration Card -->
+            <div class="sidebar-section">
+                <div class="card">
+                    <div class="card-title">LLM Configuration</div>
+
+                    <div class="form-group">
+                        <label for="provider-select">Provider</label>
+                        <select id="provider-select">
+                            <option value="auto">Auto (Gemini → Groq fallback)</option>
+                            <option value="gemini">Gemini only</option>
+                            <option value="groq">Groq only</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gemini-key">Gemini API Key</label>
+                        <input 
+                            type="password" 
+                            id="gemini-key" 
+                            placeholder="sk-..."
+                        >
+                        <div class="input-helper">🔒 Stored in browser only</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="groq-key">Groq API Key</label>
+                        <input 
+                            type="password" 
+                            id="groq-key" 
+                            placeholder="gsk_..."
+                        >
+                        <div class="input-helper">🔒 Stored in browser only</div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="slider-label">
+                            <label for="temperature-slider">Temperature</label>
+                            <span class="slider-value" id="temp-value">0.7</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            id="temperature-slider" 
+                            min="0" 
+                            max="1" 
+                            step="0.1" 
+                            value="0.7"
+                        >
+                        <div class="input-helper">Higher = creative  Lower = precise</div>
+                    </div>
+
+                    <button class="full-width" id="save-llm-btn">Save Settings</button>
+                    <div class="save-confirmation" id="llm-confirmation">✓ Settings saved</div>
+                </div>
+            </div>
+
+            <!-- RAG Configuration Card -->
+            <div class="sidebar-section">
+                <div class="card">
+                    <div class="card-title">RAG Configuration</div>
+
+                    <div class="form-group">
+                        <label for="chunk-size">Chunk Size</label>
+                        <input 
+                            type="number" 
+                            id="chunk-size" 
+                            value="1000" 
+                            min="200" 
+                            max="4000" 
+                            step="100"
+                        >
+                        <div class="input-helper">Characters per chunk</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="chunk-overlap">Chunk Overlap</label>
+                        <input 
+                            type="number" 
+                            id="chunk-overlap" 
+                            value="200" 
+                            min="0" 
+                            max="500" 
+                            step="50"
+                        >
+                        <div class="input-helper">Overlap between chunks</div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="slider-label">
+                            <label for="top-k-slider">Top K Results</label>
+                            <span class="slider-value" id="top-k-value">4</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            id="top-k-slider" 
+                            min="1" 
+                            max="10" 
+                            step="1" 
+                            value="4"
+                        >
+                        <div class="input-helper">Chunks retrieved per question</div>
+                    </div>
+
+                    <div class="input-helper">
+                        ⚠ Upload a new document to apply chunk settings
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Card -->
+            <div class="sidebar-section">
+                <div class="card">
+                    <div class="card-title">About</div>
+                    <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+                        RAG (Retrieval Augmented Generation) answers questions from your documents.
+                        Upload a document, then ask questions. Answers come only from your content.
+                    </p>
+                    <a href="https://github.com/ThippaluruNithinReddy/rag-knowledge-assistant" style="display: inline-block; margin-top: 12px; font-size: 12px; color: var(--accent); text-decoration: none;">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main">
+            <div class="content-area">
+                <!-- Upload Section -->
+                <div class="card">
+                    <div class="card-title">Upload Document</div>
+
+                    <div class="upload-zone" id="upload-zone">
+                        <div class="upload-zone-icon">⬆</div>
+                        <div class="upload-zone-text">Drag & drop a PDF or TXT file</div>
+                        <div class="upload-zone-subtext">or click to browse</div>
+                    </div>
+                    <input type="file" id="upload-input" accept=".pdf,.txt">
+
+                    <div class="selected-file is-hidden" id="selected-file">
+                        <div class="selected-file-name" id="selected-file-name"></div>
+                        <div class="selected-file-meta" id="selected-file-meta"></div>
+                        <button class="full-width" id="upload-btn" style="margin-top: 12px;">Upload &amp; Index Document</button>
+                    </div>
+
+                    <div class="upload-status" id="upload-status"></div>
+
+                    <div class="document-badge empty" id="document-badge">
+                        No document indexed yet
+                    </div>
+                </div>
+
+                <!-- Chat Section -->
+                <div class="card chat-section">
+                    <div class="card-title">Ask a Question</div>
+
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">💬</div>
+                            <div>Upload a document and ask your first question</div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <textarea 
+                            id="question-input" 
+                            placeholder="Ask anything about your uploaded document..."
+                        ></textarea>
+
+                        <div class="input-footer">
+                            <span id="doc-status">⚠ No document uploaded</span>
+                            <button class="input-actions" id="ask-btn">Ask Question →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Debug mode keeps development logs opt-in without cluttering production use.
+        const DEBUG = false;
+
+        function log(...args) {
+            if (DEBUG) console.log('[RAG]', ...args);
+        }
+
+        const API_BASE_URL = 'http://localhost:8000';
+        const STORAGE_KEY = 'rag_settings';
+        const DOCUMENT_STORAGE_KEY = 'rag_indexed_document';
+        const DEFAULT_SETTINGS = {
+            provider: 'auto',
+            gemini_key: '',
+            groq_key: '',
+            temperature: 0.7,
+            chunk_size: 1000,
+            chunk_overlap: 200,
+            top_k: 4
+        };
+        let selectedFile = null;
+
+        // Reads the current form state and normalizes types before saving to localStorage.
+        function getSettings() {
+            return {
+                provider: document.getElementById('provider-select').value,
+                gemini_key: document.getElementById('gemini-key').value.trim(),
+                groq_key: document.getElementById('groq-key').value.trim(),
+                temperature: parseFloat(document.getElementById('temperature-slider').value),
+                chunk_size: parseInt(document.getElementById('chunk-size').value, 10),
+                chunk_overlap: parseInt(document.getElementById('chunk-overlap').value, 10),
+                top_k: parseInt(document.getElementById('top-k-slider').value, 10)
+            };
+        }
+
+        // Keeps slider labels in sync with either default, restored, or user-changed values.
+        function updateSliderDisplays() {
+            document.getElementById('temp-value').textContent =
+                Number(document.getElementById('temperature-slider').value).toFixed(1);
+            document.getElementById('top-k-value').textContent =
+                document.getElementById('top-k-slider').value;
+        }
+
+        // Updates the header indicator so users can immediately see backend availability.
+        function updateConnectionStatus(isConnected) {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            statusDot.classList.remove('connected', 'disconnected');
+            statusDot.classList.add(isConnected ? 'connected' : 'disconnected');
+            statusText.textContent = isConnected ? 'Connected' : 'Disconnected';
+        }
+
+        // Stores the indexed document summary so the UI can restore context after reload.
+        function saveIndexedDocument(documentInfo) {
+            localStorage.setItem(DOCUMENT_STORAGE_KEY, JSON.stringify(documentInfo));
+        }
+
+        // Reads the last indexed document summary from localStorage when available.
+        function getIndexedDocument() {
+            const rawDocument = localStorage.getItem(DOCUMENT_STORAGE_KEY);
+            if (!rawDocument) {
+                return null;
+            }
+
+            try {
+                return JSON.parse(rawDocument);
+            } catch (error) {
+                log('Failed to parse indexed document:', error);
+                localStorage.removeItem(DOCUMENT_STORAGE_KEY);
+                return null;
+            }
+        }
+
+        // Keeps the upload badge and chat hint aligned with the active indexed document state.
+        function renderIndexedDocument(documentInfo) {
+            const documentBadge = document.getElementById('document-badge');
+            const docStatus = document.getElementById('doc-status');
+
+            if (!documentInfo) {
+                documentBadge.classList.add('empty');
+                documentBadge.textContent = 'No document indexed yet';
+                docStatus.textContent = '[!] No document uploaded';
+                return;
+            }
+
+            documentBadge.classList.remove('empty');
+            documentBadge.textContent = `[DOC] ${documentInfo.filename} - ${documentInfo.chunks_created} chunks`;
+            docStatus.textContent = `[DOC] ${documentInfo.filename}`;
+        }
+
+        // Shows upload progress, success, and failure inline without using browser alerts.
+        function setUploadStatus(type, message, detail = '') {
+            const uploadStatus = document.getElementById('upload-status');
+            uploadStatus.className = `upload-status show ${type}`;
+            uploadStatus.innerHTML = detail ? `${message}<br>${detail}` : message;
+        }
+
+        // Clears the selected file panel once an upload completes or the selection is reset.
+        function clearSelectedFile() {
+            selectedFile = null;
+            document.getElementById('upload-input').value = '';
+            document.getElementById('selected-file').classList.add('is-hidden');
+        }
+
+        // Shows the chosen file name and size before the user starts the upload request.
+        function renderSelectedFile(file) {
+            const selectedFileCard = document.getElementById('selected-file');
+            const selectedFileName = document.getElementById('selected-file-name');
+            const selectedFileMeta = document.getElementById('selected-file-meta');
+            const sizeInKb = (file.size / 1024).toFixed(1);
+
+            selectedFileName.textContent = file.name;
+            selectedFileMeta.textContent = `${sizeInKb} KB`;
+            selectedFileCard.classList.remove('is-hidden');
+        }
+
+        // Validates supported file extensions in the browser for faster feedback.
+        function isSupportedFile(file) {
+            const lowerName = file.name.toLowerCase();
+            return lowerName.endsWith('.pdf') || lowerName.endsWith('.txt');
+        }
+
+        // Reads the current effective settings from localStorage with defaults as fallback.
+        function getStoredSettings() {
+            const rawSettings = localStorage.getItem(STORAGE_KEY);
+            if (!rawSettings) {
+                return { ...DEFAULT_SETTINGS };
+            }
+
+            try {
+                return { ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) };
+            } catch (error) {
+                log('Failed to read stored settings:', error);
+                return { ...DEFAULT_SETTINGS };
+            }
+        }
+
+        // Restores saved settings when available so the UI resumes from the user's last session.
+        function loadSettings() {
+            const rawSettings = localStorage.getItem(STORAGE_KEY);
+            if (!rawSettings) {
+                updateSliderDisplays();
+                return;
+            }
+
+            try {
+                const savedSettings = JSON.parse(rawSettings);
+                const settings = { ...DEFAULT_SETTINGS, ...savedSettings };
+
+                document.getElementById('provider-select').value = settings.provider;
+                document.getElementById('gemini-key').value = settings.gemini_key;
+                document.getElementById('groq-key').value = settings.groq_key;
+                document.getElementById('temperature-slider').value = settings.temperature;
+                document.getElementById('chunk-size').value = settings.chunk_size;
+                document.getElementById('chunk-overlap').value = settings.chunk_overlap;
+                document.getElementById('top-k-slider').value = settings.top_k;
+            } catch (error) {
+                log('Failed to parse saved settings:', error);
+                localStorage.removeItem(STORAGE_KEY);
+            }
+
+            updateSliderDisplays();
+        }
+
+        // Saves all sidebar settings together so the frontend can restore them with one read.
+        function saveSettings() {
+            const confirmation = document.getElementById('llm-confirmation');
+
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(getSettings()));
+                confirmation.classList.add('show');
+                window.setTimeout(() => {
+                    confirmation.classList.remove('show');
+                }, 2000);
+            } catch (error) {
+                log('Failed to save settings:', error);
+            }
+        }
+
+        // Auto-resizes the question input so longer prompts stay comfortable without taking over the page.
+        function autoResizeTextarea() {
+            const questionInput = document.getElementById('question-input');
+            questionInput.style.height = 'auto';
+            questionInput.style.height = `${Math.min(questionInput.scrollHeight, 160)}px`;
+        }
+
+        // Adds a lightweight loading placeholder while the backend is answering a question.
+        function createLoadingSkeleton() {
+            const skeleton = document.createElement('div');
+            skeleton.className = 'loading-skeleton';
+            skeleton.id = `loading-${Date.now()}`;
+            skeleton.innerHTML = `
+                <div class="skeleton-line" style="width: 72%;"></div>
+                <div class="skeleton-line" style="width: 100%;"></div>
+                <div class="skeleton-line" style="width: 96%;"></div>
+                <div class="skeleton-line" style="width: 60%;"></div>
+            `;
+            return skeleton;
+        }
+
+        // Removes the empty state when the first upload result or answer card needs to be shown.
+        function ensureChatReady() {
+            const chatMessages = document.getElementById('chat-messages');
+            const emptyState = chatMessages.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+        }
+
+        // Escapes text before rendering into HTML so dynamic content stays safe and predictable.
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Preserves line breaks from model output while still escaping HTML-sensitive characters.
+        function formatAnswerText(value) {
+            return escapeHtml(value).replace(/\n/g, '<br>');
+        }
+
+        // Builds a consistent answer card for successful answers, warnings, and inline errors.
+        function createAnswerCard({
+            question,
+            answer,
+            answerable,
+            sources,
+            provider,
+            fallbackUsed,
+            responseTime,
+            timestamp,
+            isError = false
+        }) {
+            const answerCard = document.createElement('div');
+            answerCard.className = 'answer-card';
+
+            const answerClass = isError ? 'error' : (answerable ? '' : 'warning');
+            const statusBadgeClass = isError ? 'error' : (answerable ? 'success' : 'warning');
+            const statusBadgeText = isError
+                ? 'Error'
+                : (answerable ? 'Answered from document' : 'Not found in document');
+            const providerClass = fallbackUsed ? 'warning' : '';
+            const providerText = fallbackUsed ? `${provider} (fallback)` : provider;
+            const safeSources = Array.isArray(sources) && sources.length > 0 ? sources.join(', ') : 'No sources';
+
+            answerCard.innerHTML = `
+                <div class="answer-header">
+                    <div class="answer-question">Q: ${escapeHtml(question)}</div>
+                    <div class="answer-meta">${responseTime}s ${timestamp}</div>
+                </div>
+                <div class="answer-body ${answerClass}">${formatAnswerText(answer)}</div>
+                <div class="answer-status">
+                    <span class="badge ${statusBadgeClass}">${isError ? 'X' : (answerable ? 'OK' : '!')} ${statusBadgeText}</span>
+                </div>
+                <div class="answer-footer">
+                    <div>Sources: [${escapeHtml(safeSources)}]</div>
+                    <div class="provider-meta">
+                        <span>Provider:</span>
+                        <span class="badge ${providerClass}">${escapeHtml(providerText)}</span>
+                    </div>
+                </div>
+            `;
+
+            return answerCard;
+        }
+
+        // Resolves the most relevant API key to send based on the selected provider.
+        function resolveApiKey(settings) {
+            if (settings.provider === 'gemini') {
+                return settings.gemini_key || null;
+            }
+
+            if (settings.provider === 'groq') {
+                return settings.groq_key || null;
+            }
+
+            return settings.gemini_key || settings.groq_key || null;
+        }
+
+        // Normalizes API error payloads into user-facing messages for inline display.
+        async function getErrorMessage(response) {
+            try {
+                const errorData = await response.json();
+                return errorData.detail || 'Something went wrong. Please try again.';
+            } catch (error) {
+                log('Failed to parse error response:', error);
+                return response.status >= 500
+                    ? 'Something went wrong. Please try again.'
+                    : 'Request failed. Please try again.';
+            }
+        }
+
+        // Uploads a file together with chunk settings using multipart/form-data.
+        async function uploadDocument(file) {
+            const settings = getStoredSettings();
+            const uploadButton = document.getElementById('upload-btn');
+            const formData = new FormData();
+
+            formData.append('file', file);
+            formData.append('chunk_size', String(settings.chunk_size));
+            formData.append('chunk_overlap', String(settings.chunk_overlap));
+
+            uploadButton.disabled = true;
+            uploadButton.textContent = 'Uploading...';
+            setUploadStatus('pending', 'Uploading and indexing document...', 'This may take a few moments.');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorMessage = await getErrorMessage(response);
+                    setUploadStatus('error', `Error: ${errorMessage}`, 'Please try again');
+                    return;
+                }
+
+                const data = await response.json();
+                const indexedDocument = {
+                    filename: data.filename,
+                    chunks_created: data.chunks_created,
+                    chunk_size: data.chunk_size,
+                    chunk_overlap: data.chunk_overlap
+                };
+
+                saveIndexedDocument(indexedDocument);
+                renderIndexedDocument(indexedDocument);
+                setUploadStatus(
+                    'success',
+                    `${escapeHtml(data.filename)} uploaded successfully`,
+                    `${data.chunks_created} chunks created | chunk size: ${data.chunk_size} | overlap: ${data.chunk_overlap}<br>Ready to answer questions`
+                );
+                clearSelectedFile();
+            } catch (error) {
+                setUploadStatus(
+                    'error',
+                    'Cannot connect to server. Is the backend running on port 8000?',
+                    'Please try again'
+                );
+                log('Upload failed:', error);
+            } finally {
+                uploadButton.disabled = false;
+                uploadButton.textContent = 'Upload & Index Document';
+            }
+        }
+
+        // Sends a question to the RAG endpoint and renders either the answer or an inline error card.
+        async function askQuestion(question) {
+            const settings = getStoredSettings();
+            const chatMessages = document.getElementById('chat-messages');
+            const questionInput = document.getElementById('question-input');
+            const startTime = Date.now();
+            const loadingSkeleton = createLoadingSkeleton();
+
+            ensureChatReady();
+            chatMessages.prepend(loadingSkeleton);
+            questionInput.value = '';
+            autoResizeTextarea();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/rag/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question,
+                        provider: settings.provider,
+                        api_key: resolveApiKey(settings),
+                        temperature: settings.temperature,
+                        top_k: settings.top_k
+                    })
+                });
+
+                const responseTime = ((Date.now() - startTime) / 1000).toFixed(1);
+                const timestamp = new Date().toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                }).toLowerCase();
+
+                if (!response.ok) {
+                    const errorMessage = await getErrorMessage(response);
+                    const errorCard = createAnswerCard({
+                        question,
+                        answer: response.status >= 500
+                            ? 'Something went wrong. Please try again.'
+                            : errorMessage,
+                        answerable: false,
+                        sources: [],
+                        provider: 'system',
+                        fallbackUsed: false,
+                        responseTime,
+                        timestamp,
+                        isError: true
+                    });
+                    loadingSkeleton.replaceWith(errorCard);
+                    return;
+                }
+
+                const data = await response.json();
+                const answerCard = createAnswerCard({
+                    question,
+                    answer: data.answer,
+                    answerable: data.answerable,
+                    sources: data.sources,
+                    provider: data.provider,
+                    fallbackUsed: data.fallback_used,
+                    responseTime,
+                    timestamp
+                });
+                loadingSkeleton.replaceWith(answerCard);
+            } catch (error) {
+                const responseTime = ((Date.now() - startTime) / 1000).toFixed(1);
+                const timestamp = new Date().toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                }).toLowerCase();
+                const errorCard = createAnswerCard({
+                    question,
+                    answer: 'Cannot connect to server. Is the backend running on port 8000?',
+                    answerable: false,
+                    sources: [],
+                    provider: 'system',
+                    fallbackUsed: false,
+                    responseTime,
+                    timestamp,
+                    isError: true
+                });
+                loadingSkeleton.replaceWith(errorCard);
+                log('Question request failed:', error);
+            }
+        }
+
+        // Accepts a file from either drag-and-drop or the hidden file input and updates the preview panel.
+        function handleFileSelection(file) {
+            if (!file) {
+                return;
+            }
+
+            if (!isSupportedFile(file)) {
+                clearSelectedFile();
+                setUploadStatus('error', 'Error: Only PDF and TXT files are supported', 'Please try again');
+                return;
+            }
+
+            document.getElementById('upload-status').className = 'upload-status';
+            document.getElementById('upload-status').innerHTML = '';
+            selectedFile = file;
+            renderSelectedFile(file);
+        }
+
+        // Wires up the controls needed for Step 6 only: slider labels and settings persistence.
+        function initializeSettingsControls() {
+            document
+                .getElementById('temperature-slider')
+                .addEventListener('input', updateSliderDisplays);
+            document
+                .getElementById('top-k-slider')
+                .addEventListener('input', updateSliderDisplays);
+            document
+                .getElementById('save-llm-btn')
+                .addEventListener('click', saveSettings);
+        }
+
+        // Wires drag-and-drop, browse selection, and the upload action into one upload flow.
+        function initializeUploadControls() {
+            const uploadZone = document.getElementById('upload-zone');
+            const uploadInput = document.getElementById('upload-input');
+            const uploadButton = document.getElementById('upload-btn');
+
+            uploadZone.addEventListener('click', () => uploadInput.click());
+
+            uploadZone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                uploadZone.classList.add('drag-over');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('drag-over');
+            });
+
+            uploadZone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                uploadZone.classList.remove('drag-over');
+                handleFileSelection(event.dataTransfer.files[0]);
+            });
+
+            uploadInput.addEventListener('change', (event) => {
+                handleFileSelection(event.target.files[0]);
+            });
+
+            uploadButton.addEventListener('click', async () => {
+                if (!selectedFile) {
+                    setUploadStatus('error', 'Error: Please choose a file first', 'Please try again');
+                    return;
+                }
+
+                await uploadDocument(selectedFile);
+            });
+        }
+
+        // Connects textarea resizing plus click and keyboard submission for question requests.
+        function initializeQuestionControls() {
+            const askButton = document.getElementById('ask-btn');
+            const questionInput = document.getElementById('question-input');
+
+            askButton.addEventListener('click', async () => {
+                const question = questionInput.value.trim();
+                if (!question) {
+                    return;
+                }
+
+                await askQuestion(question);
+            });
+
+            questionInput.addEventListener('input', autoResizeTextarea);
+            questionInput.addEventListener('keydown', async (event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                    event.preventDefault();
+                    const question = questionInput.value.trim();
+                    if (!question) {
+                        return;
+                    }
+
+                    await askQuestion(question);
+                }
+            });
+        }
+
+        // Polls the backend root endpoint because it is the fastest way to verify the API is reachable.
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/`);
+                updateConnectionStatus(response.ok);
+                log('Connection check succeeded:', response.status);
+            } catch (error) {
+                updateConnectionStatus(false);
+                log('Connection check failed:', error);
+            }
+        }
+
+        initializeSettingsControls();
+        initializeUploadControls();
+        initializeQuestionControls();
+        loadSettings();
+        renderIndexedDocument(getIndexedDocument());
+        autoResizeTextarea();
+        checkConnection();
+        window.setInterval(checkConnection, 30000);
+        log('Frontend initialized');
+    </script>
+</body>
+</html>
