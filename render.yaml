@@ -1,0 +1,51 @@
+# render.yaml
+# Purpose: Render deployment configuration
+# Render reads this file to know how to build and run the project
+# This replaces manual configuration in the Render dashboard
+
+services:
+  # Backend — FastAPI Web Service
+  - type: web
+    name: rag-knowledge-assistant-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_LLM_MODEL
+        value: gemini-2.0-flash
+      - key: GEMINI_EMBEDDING_MODEL
+        value: models/embedding-001
+      - key: GROQ_LLM_MODEL
+        value: llama-3.1-8b-instant
+      - key: DEFAULT_CHAT_PROVIDER
+        value: auto
+      - key: PRIMARY_CHAT_PROVIDER
+        value: gemini
+      - key: FALLBACK_CHAT_PROVIDER
+        value: groq
+      - key: EMBEDDING_PROVIDER
+        value: huggingface
+      - key: CHUNK_SIZE
+        value: "1000"
+      - key: CHUNK_OVERLAP
+        value: "200"
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+
+  # Frontend — Static Site
+  - type: static
+    name: rag-knowledge-assistant-ui
+    staticPublishPath: frontend
+    buildCommand: echo "No build needed"
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache

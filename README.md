@@ -146,3 +146,20 @@ The chunk overlap of 200 characters helps preserve meaning at chunk boundaries. 
 - Re-ranking retrieved chunks before sending them to the LLM
 - Replacing FAISS with a managed or team-ready vector database such as ChromaDB or Pinecone
 - Adding a frontend interface
+
+## Deployment
+
+This project can be deployed to Render (render.com) for demonstration and portfolio purposes.
+
+**Live demo (example):** https://rag-knowledge-assistant-ui.onrender.com
+
+**Known limitation:** The free tier of Render does not provide persistent disk storage. Uploaded documents
+and the FAISS index are stored on the instance filesystem and will be lost when the service restarts
+(for example, after periods of inactivity or when Render rebalances resources). For production usage,
+migrate the vector store to a persistent solution such as PostgreSQL + pgvector.
+
+**To use the live demo:**
+1. Enter your own Gemini or Groq API key in the Settings panel in the UI.
+2. Upload a PDF or TXT document.
+3. Ask questions about your document.
+
