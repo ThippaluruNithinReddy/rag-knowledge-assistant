@@ -1,5 +1,5 @@
-(# NOTE: For accurate, pinned versions run `pip freeze > requirements.txt` locally
-# and remove any development- or OS-specific packages before committing.)
+ # NOTE: For accurate, pinned versions run `pip freeze > requirements.txt` locally
+# and remove any development- or OS-specific packages before committing.
 
 fastapi
 uvicorn[standard]
