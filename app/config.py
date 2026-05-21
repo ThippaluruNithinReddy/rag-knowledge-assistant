@@ -25,10 +25,13 @@ class Settings(BaseSettings):
     primary_chat_provider: str = "gemini"
     fallback_chat_provider: str = "groq"
     embedding_provider: str = "huggingface"
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 

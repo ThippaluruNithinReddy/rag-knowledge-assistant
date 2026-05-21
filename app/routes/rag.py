@@ -10,7 +10,7 @@ testable, and easy to understand.
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from app.models.schemas import DocumentUploadResponse, RAGRequest, RAGResponse
 from app.services.chunker import chunk_documents
@@ -32,9 +32,18 @@ SUPPORTED_UPLOAD_EXTENSIONS = {".pdf", ".txt"}
     response_model=DocumentUploadResponse,
     status_code=status.HTTP_200_OK,
 )
-async def upload_document(file: UploadFile = File(...)) -> DocumentUploadResponse:
+async def upload_document(
+    file: UploadFile = File(...),
+    chunk_size: int = Form(1000),
+    chunk_overlap: int = Form(200),
+) -> DocumentUploadResponse:
     """
     Save an uploaded document, load it, chunk it, and build the FAISS index.
+    
+    Form fields:
+        file: PDF or TXT file to upload
+        chunk_size: Characters per chunk (default 1000)
+        chunk_overlap: Overlap between chunks (default 200)
     """
     original_filename = file.filename or ""
     safe_filename = Path(original_filename).name
@@ -54,17 +63,26 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentUploadRespons
         saved_file_path.write_bytes(file_bytes)
 
         documents = load_document(str(saved_file_path))
-        chunks = chunk_documents(documents)
+        # chunk_documents now returns tuple of (chunks, used_size, used_overlap)
+        chunks, used_chunk_size, used_chunk_overlap = chunk_documents(
+            documents,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
         create_and_save_store(chunks, str(FAISS_INDEX_DIR))
 
         logger.info(
-            "Uploaded and indexed document '%s' into %s chunk(s).",
+            "Uploaded and indexed document '%s' into %s chunk(s) with size=%s, overlap=%s.",
             safe_filename,
             len(chunks),
+            used_chunk_size,
+            used_chunk_overlap,
         )
         return DocumentUploadResponse(
             filename=safe_filename,
             chunks_created=len(chunks),
+            chunk_size=used_chunk_size,
+            chunk_overlap=used_chunk_overlap,
             message="Document uploaded and indexed successfully",
         )
     except ValueError as exc:
@@ -91,10 +109,24 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentUploadRespons
 def ask_rag_question(request: RAGRequest) -> RAGResponse:
     """
     Load the FAISS index and answer a document question using RAG.
+    
+    Accepts:
+        question: The user's question
+        provider: LLM provider ("auto", "gemini", "groq")
+        api_key: Optional user-provided API key
+        temperature: Response creativity (0.0-1.0)
+        top_k: Number of document chunks to use for context
     """
     try:
         store = load_store(str(FAISS_INDEX_DIR))
-        result = run_rag(request.question, store)
+        result = run_rag(
+            question=request.question,
+            store=store,
+            provider=request.provider,
+            api_key=request.api_key,
+            temperature=request.temperature,
+            top_k=request.top_k,
+        )
         return RAGResponse(**result)
     except FileNotFoundError as exc:
         logger.exception("RAG question asked before any document was indexed.")

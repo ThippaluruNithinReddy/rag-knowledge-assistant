@@ -23,28 +23,47 @@ logger = logging.getLogger(__name__)
 SUPPORTED_CHAT_PROVIDERS = {"gemini", "groq"}
 
 
-def get_llm(provider: str = "gemini") -> BaseChatModel:
+def get_llm(
+    provider: str = "gemini",
+    api_key: str | None = None,
+    temperature: float = 0.7,
+) -> BaseChatModel:
     """
-    Create and return the selected chat model.
+    Create and return the selected chat model with resolved credentials and temperature.
+    
+    Priority for values:
+    1. Parameters passed to this function (from request)
+    2. Values from settings (from .env)
+    3. Hardcoded defaults
     """
     try:
         if provider == "gemini":
+            resolved_key = api_key or settings.gemini_api_key
+            if not resolved_key:
+                raise ValueError("Gemini API key not provided")
             return ChatGoogleGenerativeAI(
                 model=settings.gemini_llm_model,
-                google_api_key=settings.gemini_api_key,
+                google_api_key=resolved_key,
+                temperature=temperature,
             )
         if provider == "groq":
-            if not settings.groq_api_key:
-                raise ValueError("GROQ_API_KEY is not configured.")
+            resolved_key = api_key or settings.groq_api_key
+            if not resolved_key:
+                raise ValueError("Groq API key not provided")
 
             return ChatGroq(
                 model=settings.groq_llm_model,
-                api_key=settings.groq_api_key,
+                api_key=resolved_key,
+                temperature=temperature,
             )
 
         raise ValueError(f"Unsupported provider: {provider}")
     except Exception as exc:
-        logger.exception("Failed to create chat model for provider '%s'.", provider)
+        logger.exception(
+            "Failed to create chat model for provider '%s' with temperature %.1f.",
+            provider,
+            temperature,
+        )
         raise RuntimeError(f"Could not initialize the '{provider}' chat model.") from exc
 
 
@@ -86,7 +105,7 @@ def get_embeddings():
             google_api_key=settings.gemini_api_key,
         )
     else:
-        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain_huggingface import HuggingFaceEmbeddings
         return HuggingFaceEmbeddings(
             model_name="all-MiniLM-L6-v2"
         )

@@ -7,7 +7,7 @@ the API and the data that goes out of it. FastAPI uses these models to
 validate requests, shape responses, and generate API documentation.
 """
 
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +21,14 @@ class ChatRequest(BaseModel):
     provider: Literal["auto", "gemini", "groq"] = Field(
         default="auto",
         description="The LLM provider to use for this chat request.",
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="Optional API key from the user. If provided, overrides .env key.",
+    )
+    temperature: Optional[float] = Field(
+        default=0.7,
+        description="Controls creativity of response. Range 0.0-1.0.",
     )
 
 
@@ -42,6 +50,22 @@ class RAGRequest(BaseModel):
     """
 
     question: str = Field(..., description="The user's question about the document.")
+    provider: Literal["auto", "gemini", "groq"] = Field(
+        default="auto",
+        description="The LLM provider to use for this request.",
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="Optional API key from the user. If provided, overrides .env key.",
+    )
+    temperature: Optional[float] = Field(
+        default=0.7,
+        description="Controls creativity of response. Range 0.0-1.0.",
+    )
+    top_k: Optional[int] = Field(
+        default=4,
+        description="Number of document chunks to retrieve for context.",
+    )
 
 
 class RAGResponse(BaseModel):
@@ -56,6 +80,12 @@ class RAGResponse(BaseModel):
     answerable: bool = Field(
         ..., description="Whether the system found enough context to answer."
     )
+    provider: str = Field(
+        ..., description="The LLM provider that generated this answer."
+    )
+    fallback_used: bool = Field(
+        ..., description="Whether the response came from a fallback provider."
+    )
 
 
 class DocumentUploadResponse(BaseModel):
@@ -66,5 +96,11 @@ class DocumentUploadResponse(BaseModel):
     filename: str = Field(..., description="The uploaded document filename.")
     chunks_created: int = Field(
         ..., description="The number of chunks created from the document."
+    )
+    chunk_size: int = Field(
+        ..., description="The chunk size used for splitting."
+    )
+    chunk_overlap: int = Field(
+        ..., description="The overlap size used for splitting."
     )
     message: str = Field(..., description="A short status message about the upload.")

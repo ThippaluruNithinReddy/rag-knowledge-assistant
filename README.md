@@ -85,20 +85,28 @@ uvicorn app.main:app --reload
 Then open:
 
 ```text
+http://localhost:8000/
+```
+
+API documentation remains available at:
+
+```text
 http://localhost:8000/docs
 ```
 
 ## How To Use
 
-1. Upload a document with `POST /upload`.
-2. Ask a question with `POST /rag/ask`.
-3. Read the answer, the source filename, and the `answerable` flag.
+1. Open the frontend at `http://localhost:8000/`.
+2. Upload a document with the UI or `POST /upload`.
+3. Ask a question with the UI or `POST /rag/ask`.
+4. Read the answer, the source filename, and the `answerable` flag.
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/` | Health check |
+| GET | `/` | Frontend HTML page |
+| GET | `/health` | Health check |
 | POST | `/chat` | Direct LLM chat |
 | POST | `/upload` | Upload and index a document |
 | POST | `/rag/ask` | Ask a question from uploaded documents |
