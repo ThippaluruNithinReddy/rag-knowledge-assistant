@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     default_chat_provider: str = "auto"
     primary_chat_provider: str = "gemini"
     fallback_chat_provider: str = "groq"
-    embedding_provider: str = "huggingface"
+    embedding_provider: str = "gemini"
     chunk_size: int = 1000
     chunk_overlap: int = 200
 

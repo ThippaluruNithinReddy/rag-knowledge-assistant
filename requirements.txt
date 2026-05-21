@@ -8,10 +8,7 @@ langchain-community
 langchain-google-genai
 langchain-groq
 langchain-text-splitters
-langchain-huggingface
 google-generativeai
 faiss-cpu
-sentence-transformers
 pypdf
 python-multipart
-requests
