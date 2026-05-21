@@ -105,7 +105,4 @@ def get_embeddings():
             google_api_key=settings.gemini_api_key,
         )
     else:
-        from langchain_huggingface import HuggingFaceEmbeddings
-        return HuggingFaceEmbeddings(
-            model_name="all-MiniLM-L6-v2"
-        )
+        raise RuntimeError(f"Unsupported embedding provider: {provider}")
