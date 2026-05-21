@@ -830,7 +830,9 @@
             if (DEBUG) console.log('[RAG]', ...args);
         }
 
-        const API_BASE_URL = 'http://localhost:8000';
+        const API_BASE_URL = window.location.protocol === 'file:'
+            ? 'http://localhost:8000'
+            : window.location.origin;
         const STORAGE_KEY = 'rag_settings';
         const DOCUMENT_STORAGE_KEY = 'rag_indexed_document';
         const DEFAULT_SETTINGS = {
@@ -1357,7 +1359,7 @@
         // Polls the backend root endpoint because it is the fastest way to verify the API is reachable.
         async function checkConnection() {
             try {
-                const response = await fetch(`${API_BASE_URL}/`);
+                const response = await fetch(`${API_BASE_URL}/health`);
                 updateConnectionStatus(response.ok);
                 log('Connection check succeeded:', response.status);
             } catch (error) {
